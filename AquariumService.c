@@ -86,6 +86,7 @@ Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHo
 {
     Timestamp_t now;
     context->getTime(255, 255, &now);
+    context->currentTime = now;
 
     Timestamp_t start;
     context->getTime(startHour, startMinute, &start);

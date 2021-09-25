@@ -68,6 +68,8 @@ typedef struct
 	GetTemperature_t getHeaterTemperature;
 	GetTimestamp_t getTime;
 
+	Timestamp_t currentTime;
+
 } AquariumServiceContext_t;
 
 #ifdef __cplusplus
