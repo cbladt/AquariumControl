@@ -17,6 +17,7 @@ typedef unsigned char Minute;
 
 typedef unsigned int Timestamp_t;
 
+typedef void (*GetBool)(Boolean_t*);
 typedef void (*SetRelayCallback_t)(RelayState_t);
 typedef void (*GetTemperature_t)(Temperature_t*);
 typedef void (*GetTimestamp_t)(Hour, Minute, Timestamp_t*);
@@ -33,7 +34,11 @@ typedef struct
 	Temperature_t waterHeaterTemperatureDiffActual;
 	Temperature_t waterHeaterTemperatureDiffHysteresis;
 
+    Boolean_t externStartSignal;
+    GetBool getExternStartSignal;
+
 	Boolean_t heaterEnabled;
+    Boolean_t onlyRunHeaterAlongWithWaterPump;
 
 	Boolean_t waterPumpIsRunning;
 	SetRelayCallback_t setWaterPumpState;
@@ -65,6 +70,12 @@ typedef struct
 
 } AquariumServiceContext_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void AquariumService_Service(AquariumServiceContext_t* context);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* H_AQUARIUMSERVICE_H_ */
