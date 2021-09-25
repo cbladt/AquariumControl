@@ -43,6 +43,20 @@ void HeaterService(AquariumServiceContext_t* context)
         context->heaterEnabled = 1;
     }
 
+    // Signals ok?
+    if (context->heaterEnabled)
+    {
+        if (context->waterTemperatureActual < -5000 || context->waterTemperatureActual > 5000)
+        {
+        	context->heaterEnabled = 0;
+        }
+
+        if (context->heaterTemperatureActual < -5000 || context->heaterTemperatureActual > 5000)
+        {
+        	context->heaterEnabled = 0;
+        }
+    }
+
     // Temperature diff withing allowed range?
     context->waterHeaterTemperatureDiffActual = context->heaterTemperatureActual - context->waterTemperatureActual;
     if (context->heaterEnabled)
