@@ -15,7 +15,7 @@ typedef unsigned char Hour;
 
 typedef unsigned char Minute;
 
-typedef unsigned int Timestamp_t;
+typedef unsigned long Timestamp_t;
 
 typedef void (*GetBool)(Boolean_t*);
 typedef void (*SetRelayCallback_t)(RelayState_t);

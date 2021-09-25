@@ -60,7 +60,7 @@ void HeaterService(AquariumServiceContext_t* context)
     // Start/Stop heater.
     if (context->onlyRunHeaterAlongWithWaterPump)
     {
-        if (context->heaterEnabled && context->waterPumpIsRunning)
+        if (context->enabled && context->heaterEnabled && context->waterPumpIsRunning)
         {
             SetHeaterState(context, 1);
         }
@@ -71,7 +71,7 @@ void HeaterService(AquariumServiceContext_t* context)
     }
     else
     {
-        if (context->heaterEnabled)
+        if (context->enabled && context->heaterEnabled)
         {
             SetHeaterState(context, 1);
         }
@@ -104,7 +104,7 @@ void AquariumService_Service(AquariumServiceContext_t* context)
     HeaterService(context);
 
     // Water Pump.
-    if (context->externStartSignal || NowIsBetweenTimestamps(context, context->waterPumpBeginHour, context->waterPumpBeginMinute, context->waterPumpStopHour, context->waterPumpStopMinute))
+    if (context->enabled && (context->externStartSignal || NowIsBetweenTimestamps(context, context->waterPumpBeginHour, context->waterPumpBeginMinute, context->waterPumpStopHour, context->waterPumpStopMinute)))
     {
         SetWaterPumpState(context, 1);
     }
@@ -114,7 +114,7 @@ void AquariumService_Service(AquariumServiceContext_t* context)
     }
 
     // Air Pump.
-    if (NowIsBetweenTimestamps(context, context->airPumpBeginHour, context->airPumpBeginMinute, context->airPumpStopHour, context->airPumpStopHour))
+    if (context->enabled && (NowIsBetweenTimestamps(context, context->airPumpBeginHour, context->airPumpBeginMinute, context->airPumpStopHour, context->airPumpStopHour)))
     {
         SetAirPumpState(context, 1);
     }
@@ -124,7 +124,7 @@ void AquariumService_Service(AquariumServiceContext_t* context)
     }
 
     // Light.
-    if (context->externStartSignal || NowIsBetweenTimestamps(context, context->lightBeginHour, context->lightBeginMinute, context->lightStopHour, context->lightStopMinute))
+    if (context->enabled && (context->externStartSignal || NowIsBetweenTimestamps(context, context->lightBeginHour, context->lightBeginMinute, context->lightStopHour, context->lightStopMinute)))
     {
         SetLightState(context, 1);
     }
