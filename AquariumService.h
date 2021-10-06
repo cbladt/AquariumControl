@@ -5,7 +5,7 @@ typedef unsigned char Boolean_t;
 
 typedef Boolean_t RelayState_t;
 
-typedef signed short Temperature_t;
+typedef float Temperature_t;
 
 typedef unsigned char Percentage_t;
 
@@ -28,6 +28,7 @@ typedef struct
 
 	Temperature_t waterTemperatureSetpoint;
 	Temperature_t waterTemperatureActual;
+	Temperature_t waterTemperatureExtra;
 	Temperature_t waterTemperatureHysteresis;
 	Temperature_t heaterTemperatureActual;
 	Temperature_t waterHeaterTemperatureDiffSetpoint;
@@ -64,7 +65,8 @@ typedef struct
 	Hour lightStopHour;
 	Minute lightStopMinute;
 
-	GetTemperature_t getWaterTemperature;
+	GetTemperature_t getWaterT1;
+	GetTemperature_t getWaterT2;
 	GetTemperature_t getHeaterTemperature;
 	GetTimestamp_t getTime;
 

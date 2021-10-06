@@ -30,7 +30,8 @@ static void SetLightState(AquariumServiceContext_t* context, RelayState_t relayS
 
 void HeaterService(AquariumServiceContext_t* context)
 {
-    context->getWaterTemperature(&context->waterTemperatureActual);
+    context->getWaterT1(&context->waterTemperatureActual);
+    context->getWaterT2(&context->waterTemperatureExtra);
     context->getHeaterTemperature(&context->heaterTemperatureActual);
 
     // Heater needed?
@@ -46,12 +47,7 @@ void HeaterService(AquariumServiceContext_t* context)
     // Signals ok?
     if (context->heaterEnabled)
     {
-        if (context->waterTemperatureActual < -5000 || context->waterTemperatureActual > 5000)
-        {
-        	context->heaterEnabled = 0;
-        }
-
-        if (context->heaterTemperatureActual < -5000 || context->heaterTemperatureActual > 5000)
+        if (context->waterTemperatureActual < 0 || context->heaterTemperatureActual < 0)
         {
         	context->heaterEnabled = 0;
         }
