@@ -59,8 +59,6 @@ static Boolean_t HeaterAllowed(AquariumServiceContext_t* context, Temperature_t 
 	float max = context->Parameter.heaterTDiffMax + context->Parameter.heaterTDiffHysteresis;
 	float min = context->Parameter.heaterTDiffMax - context->Parameter.heaterTDiffHysteresis;
 
-	return 1;
-
 	// Stop if tDiff is too high.
 	if (tDiff > max)
 	{

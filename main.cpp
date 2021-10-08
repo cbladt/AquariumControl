@@ -8,7 +8,7 @@
 
 static const constexpr auto TickMs = 100;
 static const constexpr auto HeatGain = 1.001;
-static const constexpr auto HeatDiffGain = 1.0015;
+static const constexpr auto HeatDiffGain = 1.002;
 static const constexpr auto TimeGain = 10;
 static const constexpr auto RoomTemp = 21;
 
@@ -49,7 +49,7 @@ static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
 }
 
 void RewriteScreen(AquariumServiceContext_t& ctx)
-{  
+{
   std::cout << "Time" << std::endl;
   Print(ctx.Time.currentHour);
   Print(ctx.Time.currentMinute);
@@ -70,15 +70,17 @@ void RewriteScreen(AquariumServiceContext_t& ctx)
   std::cout << std::endl;
 
 
-  float waterTfiltered = (ctx.Input.waterT1 + ctx.Input.waterT2) / 2;
+  /*float waterTfiltered = (ctx.Input.waterT1 + ctx.Input.waterT2) / 2;
   float waterTerror = ctx.Parameter.waterTSetpoint - waterTfiltered;
+  float waterTdiff = ctx.Input.waterTHeat - waterTfiltered;
 
-  std::cout << "nice" << std::endl;
+  std::cout << "Nice" << std::endl;
   Print(ctx.Input.waterTHeat);
+  std::cout << "waterTdiff\t\t" << std::to_string(waterTdiff) << std::endl;
   std::cout << "waterTfiltered\t\t" << std::to_string(waterTfiltered) << std::endl;
   std::cout << "waterTerror\t\t" << std::to_string(waterTerror) << std::endl;
   Print(ctx.Output.heaterIsRunning);
-  std::cout << std::endl;
+  std::cout << std::endl;*/
 }
 
 void SimulateWater(AquariumServiceContext_t& context)
