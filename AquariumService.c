@@ -1,5 +1,6 @@
 #include <AquariumService.h>
 #include "math.h"
+#include "stdio.h"
 
 static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHour, Minute startMinute, Hour stopHour, Minute stopMinute)
 {
@@ -11,7 +12,6 @@ static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour 
 
     Timestamp_t stop;
     context->Time.getTime(stopHour, stopMinute, &stop);
-
 
     return (now >= start) && (now <= stop);
 }
@@ -88,6 +88,11 @@ static void HeaterService(AquariumServiceContext_t* context)
 	run &= HeaterTempSignalsOk(context);
 	run &= HeaterNeeded(context, tWater);
 	run &= HeaterAllowed(context, tDiff);
+
+	if (context->Parameter.onlyRunHeaterAlongWithWaterPump)
+	{
+	  run &= context->Output.waterPumpIsRunning;
+	}
 
 	context->Output.heaterIsRunning = run;
 }

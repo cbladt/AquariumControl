@@ -9,17 +9,28 @@
 static const constexpr auto TickMs = 100;
 static const constexpr auto HeatGain = 1.001;
 static const constexpr auto HeatDiffGain = 1.002;
-static const constexpr auto TimeGain = 10;
+static const constexpr auto TimeGain = 5;
 static const constexpr auto RoomTemp = 21;
 
 Temperature_t _waterTemp;
 Temperature_t _heaterTemp;
+
+unsigned short _currentYear;
+unsigned char _currentMonth;
+unsigned char _currentDay;
 Hour _currentHour;
 Minute _currentMinute;
 
 Boolean_t GetExternStartSignal()
 {
-    return 0;
+    if (_currentHour == 2 || _currentHour == 3 || _currentHour == 4)
+    {
+      return 1;
+    }
+    else
+    {
+      return 0;
+    }
 }
 
 static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
@@ -30,9 +41,9 @@ static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
         info.tm_sec = 0;
         info.tm_min = _currentMinute;
         info.tm_hour = _currentHour;
-        info.tm_mday = 25;
-        info.tm_mon = 9-1;
-        info.tm_year = 2021;
+        info.tm_mday = _currentDay;
+        info.tm_mon = _currentMonth-1;
+        info.tm_year = _currentYear-1900;
         *timestamp = mktime(&info);
     }
     else
@@ -41,18 +52,18 @@ static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
         info.tm_sec = 0;
         info.tm_min = minute;
         info.tm_hour = hour;
-        info.tm_mday = 8;
-        info.tm_mon = 10-1;
-        info.tm_year = 2021;
+        info.tm_mday = _currentDay;
+        info.tm_mon = _currentMonth-1;
+        info.tm_year = _currentYear-1900;
         *timestamp = mktime(&info);
-    }
+    }    
 }
 
 void RewriteScreen(AquariumServiceContext_t& ctx)
 {
   std::cout << "Time" << std::endl;
-  Print(ctx.Time.currentHour);
-  Print(ctx.Time.currentMinute);
+  std::cout << "Hour\t" << std::to_string(_currentHour) << std::endl;
+  std::cout << "Minute\t" << std::to_string(_currentMinute) << std::endl;
   std::cout << std::endl;
 
   std::cout << "Temperatures" << std::endl;
@@ -68,19 +79,6 @@ void RewriteScreen(AquariumServiceContext_t& ctx)
   Print(ctx.Output.heaterIsRunning);
   Print(ctx.Output.lightIsRunning);
   std::cout << std::endl;
-
-
-  /*float waterTfiltered = (ctx.Input.waterT1 + ctx.Input.waterT2) / 2;
-  float waterTerror = ctx.Parameter.waterTSetpoint - waterTfiltered;
-  float waterTdiff = ctx.Input.waterTHeat - waterTfiltered;
-
-  std::cout << "Nice" << std::endl;
-  Print(ctx.Input.waterTHeat);
-  std::cout << "waterTdiff\t\t" << std::to_string(waterTdiff) << std::endl;
-  std::cout << "waterTfiltered\t\t" << std::to_string(waterTfiltered) << std::endl;
-  std::cout << "waterTerror\t\t" << std::to_string(waterTerror) << std::endl;
-  Print(ctx.Output.heaterIsRunning);
-  std::cout << std::endl;*/
 }
 
 void SimulateWater(AquariumServiceContext_t& context)
@@ -120,6 +118,7 @@ void SimulateWater(AquariumServiceContext_t& context)
 void SimulateTime()
 {
     _currentMinute += (1 * TimeGain);
+
     if (_currentMinute > 59)
     {
         _currentHour += 1;
@@ -128,7 +127,20 @@ void SimulateTime()
 
     if (_currentHour > 23)
     {
+        _currentDay += 1;
         _currentHour = 0;
+    }
+
+    if (_currentDay > 30)
+    {
+        _currentMonth += 1;
+        _currentDay = 0;
+    }
+
+    if (_currentMonth > 12)
+    {
+        _currentYear += 1;
+        _currentMonth = 0;
     }
 }
 
@@ -161,6 +173,7 @@ void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.lightStopHour = 21;
   context.Parameter.lightStopMinute = 30;
 
+  context.Time.getTime = &GetTime;
   context.Time.currentHour = _currentHour;
   context.Time.currentMinute = _currentMinute;
   context.Time.currentSecond = 0;
@@ -173,8 +186,11 @@ int main()
     _waterTemp = RoomTemp;
     _heaterTemp = RoomTemp;
 
-    _currentHour = 6;
-    _currentMinute = 31;
+    _currentYear = 2021;
+    _currentMonth = 10;
+    _currentDay = 8;
+    _currentHour = 0;
+    _currentMinute = 0;
 
     PrepareAquariumService(context);
 
