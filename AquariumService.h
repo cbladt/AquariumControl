@@ -15,63 +15,63 @@ typedef unsigned char Hour;
 
 typedef unsigned char Minute;
 
+typedef unsigned char Second;
+
 typedef unsigned long Timestamp_t;
 
-typedef void (*GetBool)(Boolean_t*);
-typedef void (*SetRelayCallback_t)(RelayState_t);
-typedef void (*GetTemperature_t)(Temperature_t*);
 typedef void (*GetTimestamp_t)(Hour, Minute, Timestamp_t*);
 
 typedef struct
 {
-	Boolean_t enabled;
+	struct
+	{
+		Temperature_t waterT1;
+		Temperature_t waterT2;
+		Temperature_t waterTHeat;
 
-	Temperature_t waterTemperatureSetpoint;
-	Temperature_t waterTemperatureActual;
-	Temperature_t waterTemperatureExtra;
-	Temperature_t waterTemperatureHysteresis;
-	Temperature_t heaterTemperatureActual;
-	Temperature_t waterHeaterTemperatureDiffSetpoint;
-	Temperature_t waterHeaterTemperatureDiffActual;
-	Temperature_t waterHeaterTemperatureDiffHysteresis;
+		Boolean_t externStartSignal;
+	} Input;
 
-    Boolean_t externStartSignal;
-    GetBool getExternStartSignal;
+	struct
+	{
+		Boolean_t enabled;
+		Temperature_t waterTSetpoint;
+		Temperature_t waterTHysteresis;
+		Temperature_t heaterTDiffMax;
+		Temperature_t heaterTDiffHysteresis;
+		Boolean_t onlyRunHeaterAlongWithWaterPump;
 
-	Boolean_t heaterEnabled;
-    Boolean_t onlyRunHeaterAlongWithWaterPump;
+		Hour waterPumpBeginHour;
+		Minute waterPumpBeginMinute;
+		Hour waterPumpStopHour;
+		Minute waterPumpStopMinute;
 
-	Boolean_t waterPumpIsRunning;
-	SetRelayCallback_t setWaterPumpState;
-	Hour waterPumpBeginHour;
-	Minute waterPumpBeginMinute;
-	Hour waterPumpStopHour;
-	Minute waterPumpStopMinute;
+		Hour airPumpBeginHour;
+		Minute airPumpBeginMinute;
+		Hour airPumpStopHour;
+		Minute airPumpStopMinute;
 
-	Boolean_t airPumpIsRunning;
-	SetRelayCallback_t setAirPumpState;
-	Hour airPumpBeginHour;
-	Minute airPumpBeginMinute;
-	Hour airPumpStopHour;
-	Minute airPumpStopMinute;
+		Hour lightBeginHour;
+		Minute lightBeginMinute;
+		Hour lightStopHour;
+		Minute lightStopMinute;
+	} Parameter;
 
-	Boolean_t heaterIsRunning;
-	SetRelayCallback_t setHeaterState;
+	struct
+	{
+		GetTimestamp_t getTime;
+		Hour currentHour;
+		Minute currentMinute;
+		Minute currentSecond;
+	} Time;
 
-	Boolean_t lightIsRunning;
-	SetRelayCallback_t setLightState;
-	Hour lightBeginHour;
-	Minute lightBeginMinute;
-	Hour lightStopHour;
-	Minute lightStopMinute;
-
-	GetTemperature_t getWaterT1;
-	GetTemperature_t getWaterT2;
-	GetTemperature_t getHeaterTemperature;
-	GetTimestamp_t getTime;
-
-	Timestamp_t currentTime;
-
+	struct
+	{
+		Boolean_t waterPumpIsRunning;
+		Boolean_t airPumpIsRunning;
+		Boolean_t heaterIsRunning;
+		Boolean_t lightIsRunning;
+	} Output;
 } AquariumServiceContext_t;
 
 #ifdef __cplusplus

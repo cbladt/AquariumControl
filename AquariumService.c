@@ -1,145 +1,150 @@
 #include <AquariumService.h>
 #include "math.h"
 
-static void SetHeaterState(AquariumServiceContext_t* context, RelayState_t relayState);
-
-static void SetWaterPumpState(AquariumServiceContext_t* context, RelayState_t relayState)
-{
-    context->setWaterPumpState(relayState);
-    context->waterPumpIsRunning = relayState;
-}
-
-static void SetAirPumpState(AquariumServiceContext_t* context, RelayState_t relayState)
-{
-    context->setAirPumpState(relayState);
-    context->airPumpIsRunning = relayState;
-}
-
-static void SetHeaterState(AquariumServiceContext_t* context, RelayState_t relayState)
-{
-    context->setHeaterState(relayState);
-    context->heaterIsRunning = relayState;
-}
-
-static void SetLightState(AquariumServiceContext_t* context, RelayState_t relayState)
-{
-    context->setLightState(relayState);
-    context->lightIsRunning = relayState;
-}
-
-
-void HeaterService(AquariumServiceContext_t* context)
-{
-    context->getWaterT1(&context->waterTemperatureActual);
-    context->getWaterT2(&context->waterTemperatureExtra);
-    context->getHeaterTemperature(&context->heaterTemperatureActual);
-
-    // Heater needed?
-    if (context->waterTemperatureActual > (context->waterTemperatureSetpoint + context->waterTemperatureHysteresis))
-    {
-        context->heaterEnabled = 0;
-    }
-    else if (context->waterTemperatureActual < (context->waterTemperatureSetpoint - context->waterTemperatureHysteresis))
-    {
-        context->heaterEnabled = 1;
-    }
-
-    // Signals ok?
-    if (context->heaterEnabled)
-    {
-        if (context->waterTemperatureActual < 0 || context->heaterTemperatureActual < 0)
-        {
-        	context->heaterEnabled = 0;
-        }
-    }
-
-    // Temperature diff withing allowed range?
-    context->waterHeaterTemperatureDiffActual = context->heaterTemperatureActual - context->waterTemperatureActual;
-    if (context->heaterEnabled)
-    {
-        if (context->waterHeaterTemperatureDiffActual > (context->waterHeaterTemperatureDiffSetpoint + context->waterHeaterTemperatureDiffHysteresis))
-        {
-            context->heaterEnabled = 0;
-        }
-        else if (context->waterHeaterTemperatureDiffActual < (context->waterHeaterTemperatureDiffSetpoint - context->waterHeaterTemperatureDiffHysteresis))
-        {
-            context->heaterEnabled = 1;
-        }
-    }
-
-    // Start/Stop heater.
-    if (context->onlyRunHeaterAlongWithWaterPump)
-    {
-        if (context->enabled && context->heaterEnabled && context->waterPumpIsRunning)
-        {
-            SetHeaterState(context, 1);
-        }
-        else
-        {
-            SetHeaterState(context, 0);
-        }
-    }
-    else
-    {
-        if (context->enabled && context->heaterEnabled)
-        {
-            SetHeaterState(context, 1);
-        }
-        else
-        {
-            SetHeaterState(context, 0);
-        }
-    }
-}
-
-Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHour, Minute startMinute, Hour stopHour, Minute stopMinute)
+static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHour, Minute startMinute, Hour stopHour, Minute stopMinute)
 {
     Timestamp_t now;
-    context->getTime(255, 255, &now);
-    context->currentTime = now;
+    context->Time.getTime(255, 255, &now);
 
     Timestamp_t start;
-    context->getTime(startHour, startMinute, &start);
+    context->Time.getTime(startHour, startMinute, &start);
 
     Timestamp_t stop;
-    context->getTime(stopHour, stopMinute, &stop);
+    context->Time.getTime(stopHour, stopMinute, &stop);
 
 
     return (now >= start) && (now <= stop);
 }
 
+static Boolean_t TemperatureOk(Temperature_t t)
+{
+	return (t > -50) && (t < 100);
+}
+
+static Boolean_t HeaterTempSignalsOk(AquariumServiceContext_t* context)
+{
+	Boolean_t ok = TemperatureOk(context->Input.waterT1);
+	ok &= TemperatureOk(context->Input.waterT2);
+	ok &= TemperatureOk(context->Input.waterTHeat);
+
+	return ok;
+}
+
+static Boolean_t HeaterNeeded(AquariumServiceContext_t* context, Temperature_t tWater)
+{
+	float max = context->Parameter.waterTSetpoint + context->Parameter.waterTHysteresis;
+	float min = context->Parameter.waterTSetpoint - context->Parameter.waterTHysteresis;
+
+	// Stop if tWater is too high.
+	if (tWater > max)
+	{
+	  return 0;
+	}
+
+	// Start if tWater is too low.
+	else if (tWater < min)
+	{
+	  return 1;
+	}
+
+	// Otherwise just keep going.
+	else
+	{
+	  return context->Output.heaterIsRunning;
+	}
+}
+
+static Boolean_t HeaterAllowed(AquariumServiceContext_t* context, Temperature_t tDiff)
+{
+	float max = context->Parameter.heaterTDiffMax + context->Parameter.heaterTDiffHysteresis;
+	float min = context->Parameter.heaterTDiffMax - context->Parameter.heaterTDiffHysteresis;
+
+	return 1;
+
+	// Stop if tDiff is too high.
+	if (tDiff > max)
+	{
+	  return 0;
+	}
+
+	// Start if tDiff is too low.
+	else if (tDiff < min)
+	{
+	  return 1;
+	}
+
+	// Otherwise just keep going.
+	else
+	{
+	  return context->Output.heaterIsRunning;
+	}
+
+}
+
+static void HeaterService(AquariumServiceContext_t* context)
+{
+	Temperature_t tWater = (context->Input.waterT1 + context->Input.waterT2) / 2;
+	Temperature_t tDiff = context->Input.waterTHeat - tWater;
+
+	Boolean_t run = context->Parameter.enabled;
+	run &= HeaterTempSignalsOk(context);
+	run &= HeaterNeeded(context, tWater);
+	run &= HeaterAllowed(context, tDiff);
+
+	context->Output.heaterIsRunning = run;
+}
+
+static void WaterPumpService(AquariumServiceContext_t* context)
+{
+    if (NowIsBetweenTimestamps(context, context->Parameter.waterPumpBeginHour, context->Parameter.waterPumpBeginMinute, context->Parameter.waterPumpStopHour, context->Parameter.waterPumpStopMinute))
+    {
+        context->Output.waterPumpIsRunning = 1;
+    }
+    else
+    {
+    	context->Output.waterPumpIsRunning = 0;
+    }
+
+    context->Output.waterPumpIsRunning |= context->Input.externStartSignal;
+    context->Output.waterPumpIsRunning &= context->Parameter.enabled;
+}
+
+static void AirPumpService(AquariumServiceContext_t* context)
+{
+    if (NowIsBetweenTimestamps(context, context->Parameter.airPumpBeginHour, context->Parameter.airPumpBeginMinute, context->Parameter.airPumpStopHour, context->Parameter.airPumpStopHour))
+    {
+    	context->Output.airPumpIsRunning = 1;
+    }
+    else
+    {
+    	context->Output.airPumpIsRunning = 0;
+    }
+
+    context->Output.airPumpIsRunning &= context->Parameter.enabled;
+}
+
+static void LightService(AquariumServiceContext_t* context)
+{
+    if (NowIsBetweenTimestamps(context, context->Parameter.lightBeginHour, context->Parameter.lightBeginMinute, context->Parameter.lightStopHour, context->Parameter.lightStopMinute))
+    {
+    	context->Output.lightIsRunning = 1;
+    }
+    else
+    {
+    	context->Output.lightIsRunning = 0;
+    }
+
+    context->Output.lightIsRunning |= context->Input.externStartSignal;
+    context->Output.lightIsRunning &= context->Parameter.enabled;
+}
+
 void AquariumService_Service(AquariumServiceContext_t* context)
 {
-    context->getExternStartSignal(&context->externStartSignal);
     HeaterService(context);
 
-    // Water Pump.
-    if (context->enabled && (context->externStartSignal || NowIsBetweenTimestamps(context, context->waterPumpBeginHour, context->waterPumpBeginMinute, context->waterPumpStopHour, context->waterPumpStopMinute)))
-    {
-        SetWaterPumpState(context, 1);
-    }
-    else
-    {
-        SetWaterPumpState(context, 0);
-    }
+    WaterPumpService(context);
 
-    // Air Pump.
-    if (context->enabled && (NowIsBetweenTimestamps(context, context->airPumpBeginHour, context->airPumpBeginMinute, context->airPumpStopHour, context->airPumpStopHour)))
-    {
-        SetAirPumpState(context, 1);
-    }
-    else
-    {
-        SetAirPumpState(context, 0);
-    }
+    AirPumpService(context);
 
-    // Light.
-    if (context->enabled && (context->externStartSignal || NowIsBetweenTimestamps(context, context->lightBeginHour, context->lightBeginMinute, context->lightStopHour, context->lightStopMinute)))
-    {
-        SetLightState(context, 1);
-    }
-    else
-    {
-        SetLightState(context, 0);
-    }
+    LightService(context);
 }

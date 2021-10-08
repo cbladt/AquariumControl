@@ -4,44 +4,22 @@
 
 #include "AquariumService.h"
 
-#define FORM100 100
-static const constexpr auto WaterSetpoint = 25 * FORM100;
-static const constexpr auto WaterHysteresis = 0.5 * FORM100;
-static const constexpr auto WaterDiffSetpoint = 1 * FORM100;
-static const constexpr auto WaterDiffHysteresis = 0.1 * FORM100;
-static const constexpr auto HeatGain = 1.01;
-static const constexpr auto HeatDiffGain = 1.015;
+#define Print(exp) (std::cout << #exp << "\t" << std::to_string(exp) << std::endl)
+
+static const constexpr auto TickMs = 100;
+static const constexpr auto HeatGain = 1.001;
+static const constexpr auto HeatDiffGain = 1.0015;
 static const constexpr auto TimeGain = 10;
-static const constexpr auto RoomTemp = 21 * FORM100;
+static const constexpr auto RoomTemp = 21;
 
 Temperature_t _waterTemp;
 Temperature_t _heaterTemp;
 Hour _currentHour;
 Minute _currentMinute;
 
-static void GetWaterTemperature(Temperature_t* t)
+Boolean_t GetExternStartSignal()
 {
-    *t = _waterTemp;
-}
-
-static void GetHeaterTemperature(Temperature_t* t)
-{
-    *t = _heaterTemp;
-}
-
-void RelayStub(RelayState_t)
-{}
-
-void GetExternStartSignal(Boolean_t* signal)
-{
-    if (_currentHour == 2)
-    {
-        *signal = 0;
-    }
-    else
-    {
-        *signal = 0;
-    }
+    return 0;
 }
 
 static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
@@ -63,56 +41,63 @@ static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
         info.tm_sec = 0;
         info.tm_min = minute;
         info.tm_hour = hour;
-        info.tm_mday = 25;
-        info.tm_mon = 9-1;
+        info.tm_mday = 8;
+        info.tm_mon = 10-1;
         info.tm_year = 2021;
         *timestamp = mktime(&info);
     }
 }
 
 void RewriteScreen(AquariumServiceContext_t& ctx)
-{
-    // Temperatures.
-    std::cout << "\n\n\nWaterSetpoint:\t\t" << ctx.waterTemperatureSetpoint << std::endl;
-    std::cout << "WaterActual:\t\t" << ctx.waterTemperatureActual << std::endl;
-    std::cout << "HeaterActual:\t\t" << ctx.heaterTemperatureActual << std::endl;
-    std::cout << "WaterHeaterDiff:\t\t" << ctx.waterHeaterTemperatureDiffActual << std::endl;
+{  
+  std::cout << "Time" << std::endl;
+  Print(ctx.Time.currentHour);
+  Print(ctx.Time.currentMinute);
+  std::cout << std::endl;
 
-    // Heater.
-    std::cout << "\nHeaterEnabled:\t\t" << (ctx.heaterEnabled ? "True" : "False") << std::endl;
-    std::cout << "HeaterIsRunning:\t\t" << (ctx.heaterIsRunning ? "True" : "False") << std::endl;
+  std::cout << "Temperatures" << std::endl;
+  Print(ctx.Input.waterT1);
+  Print(ctx.Input.waterT2);
+  Print(ctx.Input.waterTHeat);
+  Print(ctx.Input.externStartSignal);
+  std::cout << std::endl;
 
-    // Water Pump.
-    std::cout << "\nWaterPumpIsRunning:\t" << (ctx.waterPumpIsRunning ? "True" : "False") << std::endl;
-    std::cout << "WaterStartTime:\t\t" << std::to_string(ctx.waterPumpBeginHour) << ":" << std::to_string(ctx.waterPumpBeginMinute) << std::endl;
-    std::cout << "WaterStopTime:\t\t" << std::to_string(ctx.waterPumpStopHour) << ":" << std::to_string(ctx.waterPumpStopMinute) << std::endl;
+  std::cout << "Output" << std::endl;
+  Print(ctx.Output.waterPumpIsRunning);
+  Print(ctx.Output.airPumpIsRunning);
+  Print(ctx.Output.heaterIsRunning);
+  Print(ctx.Output.lightIsRunning);
+  std::cout << std::endl;
 
-    // Air Pump.
-    std::cout << "\nAirPumpIsRunning:\t\t" << (ctx.airPumpIsRunning ? "True" : "False") << std::endl;
-    std::cout << "AirStartTime:\t\t" << std::to_string(ctx.airPumpBeginHour) << ":" << std::to_string(ctx.airPumpBeginMinute) << std::endl;
-    std::cout << "AirStopTime:\t\t" << std::to_string(ctx.airPumpStopHour) << ":" << std::to_string(ctx.airPumpStopMinute) << std::endl;
 
-    // Light.
-    std::cout << "\nLightIsRunning:\t\t" << (ctx.lightIsRunning ? "True" : "False") << std::endl;
-    std::cout << "LightStartTime:\t\t" << std::to_string(ctx.lightBeginHour) << ":" << std::to_string(ctx.lightBeginMinute) << std::endl;
-    std::cout << "LightStopTime:\t\t" << std::to_string(ctx.lightStopHour) << ":" << std::to_string(ctx.lightStopMinute) << std::endl;
+  float waterTfiltered = (ctx.Input.waterT1 + ctx.Input.waterT2) / 2;
+  float waterTerror = ctx.Parameter.waterTSetpoint - waterTfiltered;
 
-    // Time.
-    std::cout << "\nCurrentTimeIs:\t\t" << std::to_string(_currentHour) << ":" << std::to_string(_currentMinute) << std::endl;
-
+  std::cout << "nice" << std::endl;
+  Print(ctx.Input.waterTHeat);
+  std::cout << "waterTfiltered\t\t" << std::to_string(waterTfiltered) << std::endl;
+  std::cout << "waterTerror\t\t" << std::to_string(waterTerror) << std::endl;
+  Print(ctx.Output.heaterIsRunning);
+  std::cout << std::endl;
 }
 
 void SimulateWater(AquariumServiceContext_t& context)
 {
-    if (context.heaterIsRunning)
+    // Actively heating the water.
+    if (context.Output.heaterIsRunning)
     {
         _waterTemp *= HeatGain;
         _heaterTemp *= HeatDiffGain;
     }
+
+    // Heater is off, but element still warmer than the water.
     else if (_heaterTemp > _waterTemp)
     {
         _waterTemp *= HeatGain;
+        _heaterTemp *= 0.99f;
     }
+
+    // Nominal heat dissipation.
     else
     {
         _waterTemp /= HeatGain;
@@ -145,39 +130,43 @@ void SimulateTime()
     }
 }
 
+void PrepareAquariumService(AquariumServiceContext_t& context)
+{
+  context.Input.waterT1 = (_waterTemp);
+  context.Input.waterT2 = (_waterTemp - 0.356f);
+  context.Input.waterTHeat = _heaterTemp;
+  context.Input.externStartSignal = GetExternStartSignal();
+
+  context.Parameter.enabled = 1;
+  context.Parameter.waterTSetpoint = 25;
+  context.Parameter.waterTHysteresis = 0.5;
+  context.Parameter.heaterTDiffMax = 1;
+  context.Parameter.heaterTDiffHysteresis = 0.1;
+  context.Parameter.onlyRunHeaterAlongWithWaterPump = 1;
+
+  context.Parameter.waterPumpBeginHour = 9;
+  context.Parameter.waterPumpBeginMinute = 0;
+  context.Parameter.waterPumpStopHour = 21;
+  context.Parameter.waterPumpStopMinute = 30;
+
+  context.Parameter.airPumpBeginHour = 9;
+  context.Parameter.airPumpBeginMinute = 0;
+  context.Parameter.airPumpStopHour = 15;
+  context.Parameter.airPumpStopMinute = 0;
+
+  context.Parameter.lightBeginHour = 6;
+  context.Parameter.lightBeginMinute = 0;
+  context.Parameter.lightStopHour = 21;
+  context.Parameter.lightStopMinute = 30;
+
+  context.Time.currentHour = _currentHour;
+  context.Time.currentMinute = _currentMinute;
+  context.Time.currentSecond = 0;
+}
+
 int main()
 {
     AquariumServiceContext_t context;
-
-    context.waterTemperatureSetpoint = WaterSetpoint;
-    context.waterTemperatureHysteresis = WaterHysteresis;
-    context.waterHeaterTemperatureDiffSetpoint = WaterDiffSetpoint;
-    context.waterHeaterTemperatureDiffHysteresis = WaterDiffHysteresis;
-    context.onlyRunHeaterAlongWithWaterPump = 0;
-
-    context.setWaterPumpState = &RelayStub;
-    context.setAirPumpState = &RelayStub;
-    context.setHeaterState = &RelayStub;
-    context.setLightState = &RelayStub;
-    context.getWaterTemperature = &GetWaterTemperature;
-    context.getHeaterTemperature = &GetHeaterTemperature;
-    context.getTime = &GetTime;
-    context.getExternStartSignal = &GetExternStartSignal;
-
-    context.waterPumpBeginHour = 9;
-    context.waterPumpBeginMinute = 0;
-    context.waterPumpStopHour = 21;
-    context.waterPumpStopMinute = 30;
-
-    context.airPumpBeginHour = 9;
-    context.airPumpBeginMinute = 0;
-    context.airPumpStopHour = 15;
-    context.airPumpStopMinute = 0;
-
-    context.lightBeginHour = 6;
-    context.lightBeginMinute = 0;
-    context.lightStopHour = 21;
-    context.lightStopMinute = 30;
 
     _waterTemp = RoomTemp;
     _heaterTemp = RoomTemp;
@@ -185,16 +174,19 @@ int main()
     _currentHour = 6;
     _currentMinute = 31;
 
+    PrepareAquariumService(context);
+
     while (true)
     {
         SimulateWater(context);
 
         SimulateTime();
 
+        PrepareAquariumService(context);
         AquariumService_Service(&context);
 
         RewriteScreen(context);
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(TickMs));
     }
 }
