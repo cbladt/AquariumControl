@@ -35,10 +35,8 @@ typedef struct
   struct
   {
     Boolean_t enabled;
-    Temperature_t waterTSetpoint;
-    Temperature_t waterTHysteresis;
-    Temperature_t heaterTDiffMax;
-    Temperature_t heaterTDiffHysteresis;
+    Temperature_t waterTSetpoint;    
+    Temperature_t heaterTDiffMax;    
     Boolean_t onlyRunHeaterAlongWithWaterPump;
 
     Hour waterPumpBeginHour;
@@ -59,6 +57,14 @@ typedef struct
 
   struct
   {
+    float Kp;
+    float Ki;
+    float integrator;
+    float antiIntegratorWindup;
+  } Regulator;
+
+  struct
+  {
     GetTimestamp_t getTime;
     Hour currentHour;
     Minute currentMinute;
@@ -69,7 +75,7 @@ typedef struct
   {
     Boolean_t waterPumpIsRunning;
     Boolean_t airPumpIsRunning;
-    Boolean_t heaterIsRunning;
+    Percentage_t heaterPercent;
     Boolean_t lightIsRunning;
   } Output;
 } AquariumServiceContext_t;

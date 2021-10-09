@@ -1,6 +1,6 @@
 #include <AquariumService.h>
 #include "math.h"
-#include "stdio.h"
+#include "Control.h"
 
 static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHour, Minute startMinute, Hour stopHour, Minute stopMinute)
 {
@@ -30,70 +30,34 @@ static Boolean_t HeaterTempSignalsOk(AquariumServiceContext_t* context)
   return ok;
 }
 
-static Boolean_t HeaterNeeded(AquariumServiceContext_t* context, Temperature_t tWater)
-{
-  float max = context->Parameter.waterTSetpoint + context->Parameter.waterTHysteresis;
-  float min = context->Parameter.waterTSetpoint - context->Parameter.waterTHysteresis;
-
-  // Stop if tWater is too high.
-  if (tWater > max)
-  {
-    return 0;
-  }
-
-  // Start if tWater is too low.
-  else if (tWater < min)
-  {
-    return 1;
-  }
-
-  // Otherwise just keep going.
-  else
-  {
-    return context->Output.heaterIsRunning;
-  }
-}
-
-static Boolean_t HeaterAllowed(AquariumServiceContext_t* context, Temperature_t tDiff)
-{
-  float max = context->Parameter.heaterTDiffMax + context->Parameter.heaterTDiffHysteresis;
-  float min = context->Parameter.heaterTDiffMax - context->Parameter.heaterTDiffHysteresis;
-
-  // Stop if tDiff is too high.
-  if (tDiff > max)
-  {
-    return 0;
-  }
-
-  // Start if tDiff is too low.
-  else if (tDiff < min)
-  {
-    return 1;
-  }
-
-  // Otherwise just keep going.
-  else
-  {
-    return context->Output.heaterIsRunning;
-  }
-}
-
 static void HeaterService(AquariumServiceContext_t* context)
 {
   Temperature_t tWater = (context->Input.waterT1 + context->Input.waterT2) / 2;
   Temperature_t tDiff = context->Input.waterTHeat - tWater;
 
+  if (tDiff < 0)
+  {
+    tDiff = 0;
+  }
+
   Boolean_t run = context->Parameter.enabled;
-  run &= HeaterTempSignalsOk(context);
-  run &= HeaterNeeded(context, tWater);
-  run &= HeaterAllowed(context, tDiff);
+  run &= HeaterTempSignalsOk(context);    
 
   if (context->Parameter.onlyRunHeaterAlongWithWaterPump)
   {
     run &= context->Output.waterPumpIsRunning;
   }
 
-  context->Output.heaterIsRunning = run;
+  context->Output.heaterPercent = ControlPI(
+        context->Regulator.Kp,
+        context->Regulator.Ki,
+        context->Parameter.waterTSetpoint,
+        tWater,
+        &context->Regulator.integrator,
+        context->Regulator.antiIntegratorWindup,
+        0,
+        100-ControlProportional(tDiff, 0, context->Parameter.heaterTDiffMax, 0, 100)
+  );
 }
 
 static void WaterPumpService(AquariumServiceContext_t* context)

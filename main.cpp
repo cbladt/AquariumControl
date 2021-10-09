@@ -3,14 +3,14 @@
 #include <time.h>
 #include <thread>
 
-#include <Limit.hpp>
+#include <Control.h>
 #include "AquariumService.h"
 
 #define  Print(exp) (std::cout << #exp << "\t" << std::to_string(exp) << std::endl)
 #define fPrint(exp) (std::cout << #exp << "\t\t" << std::fixed << std::setprecision(2) << exp << std::endl)
 
 static const constexpr auto TickMs    = 100;
-static const constexpr auto TimeStep  = 10;
+static const constexpr auto TimeStep  = 1;
 static const constexpr auto Positive  = 1.002f;
 static const constexpr auto Negative  = 0.998f;
 static const constexpr auto RoomTemp  = 21.0f;
@@ -33,9 +33,7 @@ static Hour _currentHour;
 static Minute _currentMinute;
 
 static unsigned char _counterScreenRewrite;
-static unsigned char _counterLastHeatingState;
 static unsigned long _counterHeatingTime;
-static unsigned long _counterHeatingSwitch;
 static unsigned long _counterRunTime;
 
 static auto SinusLikeFluctuation()
@@ -82,7 +80,9 @@ static void GetTime(Hour hour, Minute minute, Timestamp_t* timestamp)
 }
 
 static void RewriteScreen(AquariumServiceContext_t& ctx)
-{
+{  
+  system("clear");
+
   std::cout << "Time" << std::endl;
   std::cout << "Hour\t\t\t\t" << std::to_string(_currentHour) << std::endl;
   std::cout << "Minute\t\t\t\t" << std::to_string(_currentMinute) << std::endl;
@@ -98,14 +98,13 @@ static void RewriteScreen(AquariumServiceContext_t& ctx)
   std::cout << "Output" << std::endl;
   Print(ctx.Output.waterPumpIsRunning);
   Print(ctx.Output.airPumpIsRunning);
-  Print(ctx.Output.heaterIsRunning);
+  Print(ctx.Output.heaterPercent);
   Print(ctx.Output.lightIsRunning);
   std::cout << std::endl;
 
   std::cout << "Counters" << std::endl;
   std::cout << "Runtime Hours\t\t\t" << std::to_string(_counterRunTime / 60) << std::endl;
-  std::cout << "HeatingTime Minutes\t\t" << std::to_string(_counterHeatingTime) << std::endl;
-  std::cout << "HeatingTime OnOff\t\t" << std::to_string(_counterHeatingSwitch) << std::endl;
+  std::cout << "HeatingTime Minutes\t\t" << std::to_string(_counterHeatingTime) << std::endl;  
   std::cout << std::endl;
 }
 
@@ -113,7 +112,7 @@ static void MaybeRewriteScreen(AquariumServiceContext_t& ctx)
 {
   _counterScreenRewrite += TickMs;
 
-  if (_counterScreenRewrite > 200)
+  if (_counterScreenRewrite > 0)
   {
     RewriteScreen(ctx);
     _counterScreenRewrite = 0;
@@ -123,10 +122,11 @@ static void MaybeRewriteScreen(AquariumServiceContext_t& ctx)
 static void SimulateWater(AquariumServiceContext_t& context)
 {
   // Actively heating the water.
-  if (context.Output.heaterIsRunning)
-  {
+  if (context.Output.heaterPercent > 0)
+  {    
+    auto power = (AquariumHeaterEffect * context.Output.heaterPercent) / 100;
     auto tWater = (_waterTemp + _heaterTemp) / 2;
-    auto tTarget = context.Parameter.waterTSetpoint + context.Parameter.waterTHysteresis;
+    auto tTarget = tWater + 0.5;
     auto totalMinutes = AquariumVolumeL * WaterSpecificHeat * (tTarget - tWater) / AquariumHeaterEffect / 60;
     auto step = TimeStep / totalMinutes;
 
@@ -139,32 +139,29 @@ static void SimulateWater(AquariumServiceContext_t& context)
 
   // Heater is off, but element still warmer than the water.
   else if (_heaterTemp > _waterTemp)
-  {
+  {    
     _waterTemp  *= Positive;
     _heaterTemp *= Negative;
   }
 
   else
-  {
+  {    
     // Nominal heat dissipation.
     auto tWater = (_waterTemp + _heaterTemp) / 2;
     if (tWater > RoomTemp)
-    {
-      auto powerW = 5.68f / (tWater * (AquariumWidthM * AquariumLengthM));
+    {      
+      auto powerW = 5.68f / (AquariumWidthM * AquariumLengthM);
       auto totalMinutes = AquariumVolumeL * WaterSpecificHeat * (RoomTemp - tWater) / powerW / 60;
-      auto step = TimeStep / totalMinutes;
+      auto step = (TimeStep / totalMinutes) * 10;
 
-      auto newWaterT = _waterTemp + step;
-      _waterTemp = (_waterTemp + newWaterT) / 2;
-
-      auto newHeatT = _heaterTemp + step;
-      _heaterTemp = (_heaterTemp + newHeatT) / 2;
+      _waterTemp  += step;
+      _heaterTemp += step;
     }
 
     else
-    {
-      _waterTemp  = Limit<decltype(_waterTemp + SinusLikeFluctuation())>(_waterTemp,  RoomTemp*0.95f, RoomTemp*1.05f);
-      _heaterTemp = Limit<decltype(_heaterTemp+ SinusLikeFluctuation())>(_heaterTemp, RoomTemp*0.95f, RoomTemp*1.05f);
+    {      
+      _waterTemp  = ControlLimit(_waterTemp + SinusLikeFluctuation(), RoomTemp*0.95f, RoomTemp*1.05f);
+      _heaterTemp = ControlLimit(_heaterTemp+ SinusLikeFluctuation(), RoomTemp*0.95f, RoomTemp*1.05f);
     }
   }
 }
@@ -207,9 +204,7 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
 
   context.Parameter.enabled = 1;
   context.Parameter.waterTSetpoint = 25;
-  context.Parameter.waterTHysteresis = 0.3;
   context.Parameter.heaterTDiffMax = 0.5;
-  context.Parameter.heaterTDiffHysteresis = 0.1;
   context.Parameter.onlyRunHeaterAlongWithWaterPump = 0;
 
   context.Parameter.waterPumpBeginHour = 9;
@@ -227,6 +222,10 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.lightStopHour = 21;
   context.Parameter.lightStopMinute = 30;
 
+  context.Regulator.Kp = 3;
+  context.Regulator.Ki = 10;
+  context.Regulator.antiIntegratorWindup = 25;
+
   context.Time.getTime = &GetTime;
   context.Time.currentHour = _currentHour;
   context.Time.currentMinute = _currentMinute;
@@ -235,15 +234,9 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
 
 static void ServiceCounters(AquariumServiceContext_t& context)
 {
-  if (context.Output.heaterIsRunning)
+  if (context.Output.heaterPercent > 0)
   {
     _counterHeatingTime += TimeStep;
-  }
-
-  if (context.Output.heaterIsRunning != _counterLastHeatingState)
-  {
-    _counterHeatingSwitch++;
-    _counterLastHeatingState = context.Output.heaterIsRunning;
   }
 
   _counterRunTime += TimeStep;
@@ -262,9 +255,7 @@ int main()
     _currentHour = 5;
     _currentMinute = 0;
 
-    _counterLastHeatingState = 0;
     _counterHeatingTime = 0;
-    _counterHeatingSwitch = 0;
     _counterRunTime = 0;
 
     PrepareAquariumService(context);    
