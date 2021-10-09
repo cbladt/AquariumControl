@@ -3,13 +3,14 @@
 #include <time.h>
 #include <thread>
 
+#include <Limit.hpp>
 #include "AquariumService.h"
 
 #define  Print(exp) (std::cout << #exp << "\t" << std::to_string(exp) << std::endl)
 #define fPrint(exp) (std::cout << #exp << "\t\t" << std::fixed << std::setprecision(2) << exp << std::endl)
 
 static const constexpr auto TickMs    = 100;
-static const constexpr auto TimeStep  = 1;
+static const constexpr auto TimeStep  = 10;
 static const constexpr auto Positive  = 1.002f;
 static const constexpr auto Negative  = 0.998f;
 static const constexpr auto RoomTemp  = 21.0f;
@@ -31,26 +32,11 @@ static unsigned char _currentDay;
 static Hour _currentHour;
 static Minute _currentMinute;
 
+static unsigned char _counterScreenRewrite;
 static unsigned char _counterLastHeatingState;
 static unsigned long _counterHeatingTime;
 static unsigned long _counterHeatingSwitch;
 static unsigned long _counterRunTime;
-
-template <typename T>
-static T Limit(T in, T min, T max)
-{
-  if (in < min)
-  {
-    return min;
-  }
-
-  if (in > max)
-  {
-    return max;
-  }
-
-  return in;
-}
 
 static auto SinusLikeFluctuation()
 {
@@ -123,6 +109,17 @@ static void RewriteScreen(AquariumServiceContext_t& ctx)
   std::cout << std::endl;
 }
 
+static void MaybeRewriteScreen(AquariumServiceContext_t& ctx)
+{
+  _counterScreenRewrite += TickMs;
+
+  if (_counterScreenRewrite > 200)
+  {
+    RewriteScreen(ctx);
+    _counterScreenRewrite = 0;
+  }
+}
+
 static void SimulateWater(AquariumServiceContext_t& context)
 {
   // Actively heating the water.
@@ -133,8 +130,11 @@ static void SimulateWater(AquariumServiceContext_t& context)
     auto totalMinutes = AquariumVolumeL * WaterSpecificHeat * (tTarget - tWater) / AquariumHeaterEffect / 60;
     auto step = TimeStep / totalMinutes;
 
-    _waterTemp  += step * Negative;
-    _heaterTemp += step * Positive;
+    auto newWaterT = _waterTemp + step * Negative;
+    _waterTemp = (_waterTemp + newWaterT) / 2;
+
+    auto newHeatT = _heaterTemp + step * Positive;
+    _heaterTemp = (_heaterTemp + newHeatT) / 2;
   }
 
   // Heater is off, but element still warmer than the water.
@@ -144,10 +144,9 @@ static void SimulateWater(AquariumServiceContext_t& context)
     _heaterTemp *= Negative;
   }
 
-  // Nominal heat dissipation.
   else
   {
-    // Calculate actual dissipation.
+    // Nominal heat dissipation.
     auto tWater = (_waterTemp + _heaterTemp) / 2;
     if (tWater > RoomTemp)
     {
@@ -155,8 +154,11 @@ static void SimulateWater(AquariumServiceContext_t& context)
       auto totalMinutes = AquariumVolumeL * WaterSpecificHeat * (RoomTemp - tWater) / powerW / 60;
       auto step = TimeStep / totalMinutes;
 
-      _waterTemp  += step;
-      _heaterTemp += step;
+      auto newWaterT = _waterTemp + step;
+      _waterTemp = (_waterTemp + newWaterT) / 2;
+
+      auto newHeatT = _heaterTemp + step;
+      _heaterTemp = (_heaterTemp + newHeatT) / 2;
     }
 
     else
@@ -199,14 +201,14 @@ static void SimulateTime()
 static void PrepareAquariumService(AquariumServiceContext_t& context)
 {
   context.Input.waterT1 = (_waterTemp);
-  context.Input.waterT2 = (_waterTemp - 0.356f);
+  context.Input.waterT2 = (_waterTemp);
   context.Input.waterTHeat = _heaterTemp;
   context.Input.externStartSignal = GetExternStartSignal();
 
   context.Parameter.enabled = 1;
   context.Parameter.waterTSetpoint = 25;
-  context.Parameter.waterTHysteresis = 0.5;
-  context.Parameter.heaterTDiffMax = 1;
+  context.Parameter.waterTHysteresis = 0.3;
+  context.Parameter.heaterTDiffMax = 0.5;
   context.Parameter.heaterTDiffHysteresis = 0.1;
   context.Parameter.onlyRunHeaterAlongWithWaterPump = 0;
 
@@ -265,7 +267,7 @@ int main()
     _counterHeatingSwitch = 0;
     _counterRunTime = 0;
 
-    PrepareAquariumService(context);
+    PrepareAquariumService(context);    
 
     while (true)
     {
@@ -276,7 +278,7 @@ int main()
       PrepareAquariumService(context);
       AquariumService_Service(&context);
 
-      RewriteScreen(context);
+      MaybeRewriteScreen(context);
 
       ServiceCounters(context);
 

@@ -23,55 +23,55 @@ typedef void (*GetTimestamp_t)(Hour, Minute, Timestamp_t*);
 
 typedef struct
 {
-	struct
-	{
-		Temperature_t waterT1;
-		Temperature_t waterT2;
-		Temperature_t waterTHeat;
+  struct
+  {
+    Temperature_t waterT1;
+    Temperature_t waterT2;
+    Temperature_t waterTHeat;
 
-		Boolean_t externStartSignal;
-	} Input;
+    Boolean_t externStartSignal;
+  } Input;
 
-	struct
-	{
-		Boolean_t enabled;
-		Temperature_t waterTSetpoint;
-		Temperature_t waterTHysteresis;
-		Temperature_t heaterTDiffMax;
-		Temperature_t heaterTDiffHysteresis;
-		Boolean_t onlyRunHeaterAlongWithWaterPump;
+  struct
+  {
+    Boolean_t enabled;
+    Temperature_t waterTSetpoint;
+    Temperature_t waterTHysteresis;
+    Temperature_t heaterTDiffMax;
+    Temperature_t heaterTDiffHysteresis;
+    Boolean_t onlyRunHeaterAlongWithWaterPump;
 
-		Hour waterPumpBeginHour;
-		Minute waterPumpBeginMinute;
-		Hour waterPumpStopHour;
-		Minute waterPumpStopMinute;
+    Hour waterPumpBeginHour;
+    Minute waterPumpBeginMinute;
+    Hour waterPumpStopHour;
+    Minute waterPumpStopMinute;
 
-		Hour airPumpBeginHour;
-		Minute airPumpBeginMinute;
-		Hour airPumpStopHour;
-		Minute airPumpStopMinute;
+    Hour airPumpBeginHour;
+    Minute airPumpBeginMinute;
+    Hour airPumpStopHour;
+    Minute airPumpStopMinute;
 
-		Hour lightBeginHour;
-		Minute lightBeginMinute;
-		Hour lightStopHour;
-		Minute lightStopMinute;
-	} Parameter;
+    Hour lightBeginHour;
+    Minute lightBeginMinute;
+    Hour lightStopHour;
+    Minute lightStopMinute;
+  } Parameter;
 
-	struct
-	{
-		GetTimestamp_t getTime;
-		Hour currentHour;
-		Minute currentMinute;
-		Minute currentSecond;
-	} Time;
+  struct
+  {
+    GetTimestamp_t getTime;
+    Hour currentHour;
+    Minute currentMinute;
+    Minute currentSecond;
+  } Time;
 
-	struct
-	{
-		Boolean_t waterPumpIsRunning;
-		Boolean_t airPumpIsRunning;
-		Boolean_t heaterIsRunning;
-		Boolean_t lightIsRunning;
-	} Output;
+  struct
+  {
+    Boolean_t waterPumpIsRunning;
+    Boolean_t airPumpIsRunning;
+    Boolean_t heaterIsRunning;
+    Boolean_t lightIsRunning;
+  } Output;
 } AquariumServiceContext_t;
 
 #ifdef __cplusplus

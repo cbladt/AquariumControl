@@ -1,5 +1,6 @@
 #include <AquariumService.h>
 #include "math.h"
+#include "stdio.h"
 
 static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour startHour, Minute startMinute, Hour stopHour, Minute stopMinute)
 {
