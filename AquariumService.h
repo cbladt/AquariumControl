@@ -61,6 +61,7 @@ typedef struct
     float MaxTn;
     float integrator;
     float antiIntegratorWindup;
+    Percentage_t MaxOutput;
   } Regulator;
 
   struct

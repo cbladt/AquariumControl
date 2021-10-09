@@ -48,6 +48,9 @@ static void HeaterService(AquariumServiceContext_t* context)
     run &= context->Output.waterPumpIsRunning;
   }
 
+  float maybeMax = 100-ControlProportional(tDiff, 0, context->Parameter.heaterTDiffMax, 0, 100);
+  float max = ControlMinimum(maybeMax, context->Regulator.MaxOutput);
+
   context->Output.heaterPercent = ControlPI(
         context->Regulator.MaxKp,
         context->Regulator.MaxTn,
@@ -56,7 +59,7 @@ static void HeaterService(AquariumServiceContext_t* context)
         &context->Regulator.integrator,
         context->Regulator.antiIntegratorWindup,
         0,
-        100-ControlProportional(tDiff, 0, context->Parameter.heaterTDiffMax, 0, 100)
+        max
   );
 }
 

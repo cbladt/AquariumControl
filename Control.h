@@ -1,6 +1,18 @@
 #pragma once
 #include "stdio.h"
 
+static float ControlMinimum(float a, float b)
+{
+  if (a < b)
+  {
+    return a;
+  }
+  else
+  {
+    return b;
+  }
+}
+
 static float ControlLimit(float in, float min, float max)
 {
   if (in < min)

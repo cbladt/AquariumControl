@@ -120,7 +120,7 @@ static void MaybeRewriteScreen(AquariumServiceContext_t& ctx)
 }
 
 static void SimulateWater(AquariumServiceContext_t& context)
-{
+{   
   // Actively heating the water.
   if (context.Output.heaterPercent > 0)
   {    
@@ -152,7 +152,7 @@ static void SimulateWater(AquariumServiceContext_t& context)
     {      
       auto powerW = 5.68f / (AquariumWidthM * AquariumLengthM);
       auto totalMinutes = AquariumVolumeL * WaterSpecificHeat * (RoomTemp - tWater) / powerW / 60;
-      auto step = (TimeStep / totalMinutes) * 10;
+      auto step = (TimeStep / totalMinutes);
 
       _waterTemp  += step;
       _heaterTemp += step;
@@ -222,9 +222,10 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.lightStopHour = 21;
   context.Parameter.lightStopMinute = 30;
 
-  context.Regulator.MaxKp = 25;
-  context.Regulator.MaxTn = 25;
-  context.Regulator.antiIntegratorWindup = 100;
+  context.Regulator.MaxKp = 1000;
+  context.Regulator.MaxTn = 1000;
+  context.Regulator.antiIntegratorWindup = 10;
+  context.Regulator.MaxOutput = 100;
 
   context.Time.getTime = &GetTime;
   context.Time.currentHour = _currentHour;
