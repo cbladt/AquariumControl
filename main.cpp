@@ -142,7 +142,7 @@ static void SimulateWater(AquariumServiceContext_t& context)
   {
     _waterTemp  *= Positive;
     _heaterTemp *= Negative;
-}
+  }
 
   // Nominal heat dissipation.
   else
@@ -161,13 +161,9 @@ static void SimulateWater(AquariumServiceContext_t& context)
 
     else
     {
-      _waterTemp  += SinusLikeFluctuation();
-      _heaterTemp += SinusLikeFluctuation();
+      _waterTemp  = Limit<decltype(_waterTemp + SinusLikeFluctuation())>(_waterTemp,  RoomTemp*0.95f, RoomTemp*1.05f);
+      _heaterTemp = Limit<decltype(_heaterTemp+ SinusLikeFluctuation())>(_heaterTemp, RoomTemp*0.95f, RoomTemp*1.05f);
     }
-
-    // Limit results.
-    _waterTemp  = Limit<decltype(_waterTemp)> (_waterTemp,  RoomTemp*0.8, RoomTemp*1.2);
-    _heaterTemp = Limit<decltype(_heaterTemp)>(_heaterTemp, RoomTemp*0.8, RoomTemp*1.2);
   }
 }
 
@@ -212,7 +208,7 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.waterTHysteresis = 0.5;
   context.Parameter.heaterTDiffMax = 1;
   context.Parameter.heaterTDiffHysteresis = 0.1;
-  context.Parameter.onlyRunHeaterAlongWithWaterPump = 1;
+  context.Parameter.onlyRunHeaterAlongWithWaterPump = 0;
 
   context.Parameter.waterPumpBeginHour = 9;
   context.Parameter.waterPumpBeginMinute = 0;
