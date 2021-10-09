@@ -19,7 +19,7 @@ static Boolean_t NowIsBetweenTimestamps(AquariumServiceContext_t* context, Hour 
 static Boolean_t TemperatureOk(Temperature_t t)
 {
   return (t > -50) && (t < 100);
-  }
+}
 
 static Boolean_t HeaterTempSignalsOk(AquariumServiceContext_t* context)
 {
@@ -49,8 +49,8 @@ static void HeaterService(AquariumServiceContext_t* context)
   }
 
   context->Output.heaterPercent = ControlPI(
-        context->Regulator.Kp,
-        context->Regulator.Ki,
+        context->Regulator.MaxKp,
+        context->Regulator.MaxTn,
         context->Parameter.waterTSetpoint,
         tWater,
         &context->Regulator.integrator,

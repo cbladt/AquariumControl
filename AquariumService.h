@@ -57,8 +57,8 @@ typedef struct
 
   struct
   {
-    float Kp;
-    float Ki;
+    float MaxKp;
+    float MaxTn;
     float integrator;
     float antiIntegratorWindup;
   } Regulator;

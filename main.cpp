@@ -10,7 +10,7 @@
 #define fPrint(exp) (std::cout << #exp << "\t\t" << std::fixed << std::setprecision(2) << exp << std::endl)
 
 static const constexpr auto TickMs    = 100;
-static const constexpr auto TimeStep  = 1;
+static const constexpr auto TimeStep  = 0.3f;
 static const constexpr auto Positive  = 1.002f;
 static const constexpr auto Negative  = 0.998f;
 static const constexpr auto RoomTemp  = 21.0f;
@@ -33,8 +33,8 @@ static Hour _currentHour;
 static Minute _currentMinute;
 
 static unsigned char _counterScreenRewrite;
-static unsigned long _counterHeatingTime;
-static unsigned long _counterRunTime;
+static float _counterHeatingTime;
+static float _counterRunTime;
 
 static auto SinusLikeFluctuation()
 {
@@ -222,9 +222,9 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.lightStopHour = 21;
   context.Parameter.lightStopMinute = 30;
 
-  context.Regulator.Kp = 3;
-  context.Regulator.Ki = 10;
-  context.Regulator.antiIntegratorWindup = 25;
+  context.Regulator.MaxKp = 25;
+  context.Regulator.MaxTn = 25;
+  context.Regulator.antiIntegratorWindup = 100;
 
   context.Time.getTime = &GetTime;
   context.Time.currentHour = _currentHour;

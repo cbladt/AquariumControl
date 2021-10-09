@@ -1,4 +1,5 @@
 #pragma once
+#include "stdio.h"
 
 static float ControlLimit(float in, float min, float max)
 {
@@ -44,9 +45,35 @@ static float ControlProportional(float input, float minIn, float maxIn, float mi
   return result;
 }
 
-static float ControlPI(float Kp, float Ki, float reference, float feedback, float* integrator, float antiIntegratorWindup, float limitMin, float limitMax)
+static float _GetKp(float error, float maxKp)
 {
-  float error = reference - feedback;
+  if (error < 0)
+  {
+      error /= -1;
+  }
+
+  return ControlProportional(error, 0, 5, 0.1, maxKp);
+}
+
+static float _GetKi(float error, float maxTn)
+{
+  if (error < 0)
+  {
+      error /= -1;
+  }
+
+  float Tn = maxTn-ControlProportional(error, 0, 5, 0.1, maxTn);
+
+  return 1/Tn;
+}
+
+static float ControlPI(float maxKp, float maxTn, float reference, float feedback, float* integrator, float antiIntegratorWindup, float limitMin, float limitMax)
+{  
+  float error = reference - feedback; 
+
+  float Kp = _GetKp(error, maxKp);
+
+  float Ki = _GetKi(error, maxTn);
 
   float proportional = error * Kp;
 
