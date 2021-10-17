@@ -3,7 +3,6 @@
 #include <time.h>
 #include <thread>
 
-#include <Control.h>
 #include "AquariumService.h"
 
 #define  Print(exp) (std::cout << #exp << "\t" << std::to_string(exp) << std::endl)
@@ -35,6 +34,21 @@ static Minute _currentMinute;
 static unsigned char _counterScreenRewrite;
 static float _counterHeatingTime;
 static float _counterRunTime;
+
+static float ControlLimit(float in, float min, float max)
+{
+  if (in < min)
+  {
+    return min;
+  }
+
+  if (in > max)
+  {
+    return max;
+  }
+
+  return in;
+}
 
 static auto SinusLikeFluctuation()
 {
@@ -225,7 +239,7 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Regulator.MaxKp = 1000;
   context.Regulator.MaxTn = 1000;
   context.Regulator.antiIntegratorWindup = 10;
-  context.Regulator.MaxOutput = 100;
+  context.Regulator.MaxOutput = 50;
 
   context.Time.getTime = &GetTime;
   context.Time.currentHour = _currentHour;
