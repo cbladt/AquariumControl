@@ -132,15 +132,15 @@ static void HeaterService(AquariumServiceContext_t* context)
     tDiff = 0;
   }
 
-  context->Output.heaterIsRunning = context->Parameter.enabled;
-  context->Output.heaterIsRunning &= HeaterTempSignalsOk(context);
+  context->Output.heaterIsEnabled = context->Parameter.enabled;
+  context->Output.heaterIsEnabled &= HeaterTempSignalsOk(context);
 
   if (context->Parameter.onlyRunHeaterAlongWithWaterPump)
   {
-      context->Output.heaterIsRunning &= context->Output.waterPumpIsRunning;
+      context->Output.heaterIsEnabled &= context->Output.waterPumpIsRunning;
   }
 
-  if (context->Output.heaterIsRunning > 0)
+  if (context->Output.heaterIsEnabled > 0)
   {
       float maybeMax = 100-ControlProportional(tDiff, 0, context->Parameter.heaterTDiffMax, 0, 100);
       float max = ControlMinimum(maybeMax, context->Regulator.MaxOutput);
