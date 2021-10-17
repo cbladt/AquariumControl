@@ -10,10 +10,10 @@
 #define fPrint(exp) (std::cout << #exp << "\t\t" << std::fixed << std::setprecision(2) << exp << std::endl)
 
 static const constexpr auto TickMs    = 100;
-static const constexpr auto TimeStep  = 0.3f;
+static const constexpr auto TimeStep  = 5;
 static const constexpr auto Positive  = 1.002f;
 static const constexpr auto Negative  = 0.998f;
-static const constexpr auto RoomTemp  = 21.0f;
+static const constexpr auto RoomTemp  = 11.0f;
 
 static const constexpr auto AquariumLengthM = 0.5f;
 static const constexpr auto AquariumWidthM = 0.2f;
@@ -43,9 +43,9 @@ static auto SinusLikeFluctuation()
 
 static Boolean_t GetExternStartSignal()
 {
-  if (_currentHour == 2 || _currentHour == 3 || _currentHour == 4)
+  if (_currentHour == 2)
   {
-    return 1;
+    return 0;
   }
   else
   {
@@ -205,7 +205,7 @@ static void PrepareAquariumService(AquariumServiceContext_t& context)
   context.Parameter.enabled = 1;
   context.Parameter.waterTSetpoint = 25;
   context.Parameter.heaterTDiffMax = 0.5;
-  context.Parameter.onlyRunHeaterAlongWithWaterPump = 0;
+  context.Parameter.onlyRunHeaterAlongWithWaterPump = 1;
 
   context.Parameter.waterPumpBeginHour = 9;
   context.Parameter.waterPumpBeginMinute = 0;
@@ -253,7 +253,7 @@ int main()
     _currentYear = 2021;
     _currentMonth = 10;
     _currentDay = 8;
-    _currentHour = 5;
+    _currentHour = 3;
     _currentMinute = 0;
 
     _counterHeatingTime = 0;
