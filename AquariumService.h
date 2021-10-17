@@ -75,9 +75,10 @@ typedef struct
   struct
   {
     Boolean_t waterPumpIsRunning;
-    Boolean_t airPumpIsRunning;
-    Percentage_t heaterPercent;
+    Boolean_t airPumpIsRunning;    
     Boolean_t lightIsRunning;
+    Boolean_t heaterIsRunning;
+    Percentage_t heaterPercent;
   } Output;
 } AquariumServiceContext_t;
 
